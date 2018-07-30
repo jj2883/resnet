@@ -14,12 +14,12 @@ import torch.backends.cudnn as cudnn
 import torch.utils.data
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
-
+import torch.nn.functional as F
 #import torch.utils.model_zoo as model_zoo
 
-parser = argparse.ArgumentParser(description ='PyTorch ResNet')
+parser = argparse.ArgumentParser(description ='PyTorch ResNet_imagenet')
 
-parser.add_argument('--epochs', default = 74, type=int, metavar='N', help= 'epoch default =74')
+parser.add_argument('--epochs', default = 64000, type=int, metavar='N', help= 'epoch default =74')
 parser.add_argument('--dataset', default= 'cifar10', type=str, help='dataset of cifar10 or imagenet, default is cifar10')
 parser.add_argument('--start-epoch', default =0, type=int, metavar='N', help='default is 0')
 parser.add_argument('--lr', '--learning-rate', default=0.01, type=float, metavar='LR', help='learning rate, default is 0.01')
@@ -28,8 +28,9 @@ parser.add_argument('--weight-decay', '--wd', default = 1e-4, type=float, metava
 parser.add_argument('-e', '--evaluate', action='store_true', help='evaulate model, default true')
 parser.add_argument('--no-cuda', action='store_true', default = False, help='when not using cuda, default =false')
 parser.add_argument('--resnet', default = 'resnet50', type=str, help='choose from resnet18, resnet34, 50, 101, 152, default is 50')
+parser.add_argument('--batch_size', default = 50, type=int, help='default batchsize =50')
 
-#__all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
+#__all__ = ['ResNet_imagenet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
 #           'resnet152']
 
 
@@ -48,11 +49,11 @@ def conv3x3(in_planes, out_planes, stride=1):
                      padding=1, bias=False)
 
 
-class BasicBlock(nn.Module):
+class BasicBlock_imagenet(nn.Module):
     expansion = 1
 
     def __init__(self, inplanes, planes, stride=1, downsample=None):
-        super(BasicBlock, self).__init__()
+        super(BasicBlock_imagenet, self).__init__()
         self.conv1 = conv3x3(inplanes, planes, stride)
         self.bn1 = nn.BatchNorm2d(planes)
         self.relu = nn.ReLU(inplace=True)
@@ -80,11 +81,11 @@ class BasicBlock(nn.Module):
         return out
 
 
-class Bottleneck(nn.Module):
+class Bottleneck_imagenet(nn.Module):
     expansion = 4
 
     def __init__(self, inplanes, planes, stride=1, downsample=None):
-        super(Bottleneck, self).__init__()
+        super(Bottleneck_imagenet, self).__init__()
         self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, bias=False)
         self.bn1 = nn.BatchNorm2d(planes)
         self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=stride,
@@ -119,11 +120,11 @@ class Bottleneck(nn.Module):
         return out
 
 
-class ResNet(nn.Module):
+class ResNet_imagenet(nn.Module):
 
     def __init__(self, block, layers, num_classes=1000):
         self.inplanes = 64
-        super(ResNet, self).__init__()
+        super(ResNet_imagenet, self).__init__()
         self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3,
                                bias=False)
         self.bn1 = nn.BatchNorm2d(64)
@@ -133,9 +134,6 @@ class ResNet(nn.Module):
         self.layer2 = self._make_layer(block, 128, layers[1], stride=2)
         self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
-        if cifar_check == True
-            self.avgpool=nn.AvgPool2d(8)
-
         self.avgpool = nn.AvgPool2d(7, stride=1)
         self.fc = nn.Linear(512 * block.expansion, num_classes)
     
@@ -181,67 +179,182 @@ class ResNet(nn.Module):
         return x
 
 
+
+
+
+
+
+
+
+class BasicBlock_cifar(nn.Module):
+    expansion = 1
+
+    def __init__(self, in_planes, planes, stride=1):
+        super(BasicBlock_cifar, self).__init__()
+        self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
+        self.bn1 = nn.BatchNorm2d(planes)
+        self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=1, padding=1, bias=False)
+        self.bn2 = nn.BatchNorm2d(planes)
+
+        self.shortcut = nn.Sequential()
+        if stride != 1 or in_planes != self.expansion*planes:
+            self.shortcut = nn.Sequential(
+                nn.Conv2d(in_planes, self.expansion*planes, kernel_size=1, stride=stride, bias=False),
+                nn.BatchNorm2d(self.expansion*planes)
+            )
+
+    def forward(self, x):
+        out = F.relu(self.bn1(self.conv1(x)))
+        out = self.bn2(self.conv2(out))
+        out += self.shortcut(x)
+        out = F.relu(out)
+        return out
+
+
+class Bottleneck_cifar(nn.Module):
+    expansion = 4
+
+    def __init__(self, in_planes, planes, stride=1):
+        super(Bottleneck_cifar, self).__init__()
+        self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=1, bias=False)
+        self.bn1 = nn.BatchNorm2d(planes)
+        self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
+        self.bn2 = nn.BatchNorm2d(planes)
+        self.conv3 = nn.Conv2d(planes, self.expansion*planes, kernel_size=1, bias=False)
+        self.bn3 = nn.BatchNorm2d(self.expansion*planes)
+
+        self.shortcut = nn.Sequential()
+        if stride != 1 or in_planes != self.expansion*planes:
+            self.shortcut = nn.Sequential(
+                nn.Conv2d(in_planes, self.expansion*planes, kernel_size=1, stride=stride, bias=False),
+                nn.BatchNorm2d(self.expansion*planes)
+            )
+
+    def forward(self, x):
+        out = F.relu(self.bn1(self.conv1(x)))
+        out = F.relu(self.bn2(self.conv2(out)))
+        out = self.bn3(self.conv3(out))
+        out += self.shortcut(x)
+        out = F.relu(out)
+        return out
+
+
+class ResNet_cifar(nn.Module):
+    def __init__(self, block, num_blocks, num_classes=10):
+        super(ResNet_cifar, self).__init__()
+        self.in_planes = 64
+
+        self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
+        self.bn1 = nn.BatchNorm2d(64)
+        self.layer1 = self._make_layer(block, 64, num_blocks[0], stride=1)
+        self.layer2 = self._make_layer(block, 128, num_blocks[1], stride=2)
+        self.layer3 = self._make_layer(block, 256, num_blocks[2], stride=2)
+        self.layer4 = self._make_layer(block, 512, num_blocks[3], stride=2)
+        self.linear = nn.Linear(512*block.expansion, num_classes)
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+            elif isinstance(m, nn.BatchNorm2d):
+                nn.init.constant_(m.weight, 1)
+                nn.init.constant_(m.bias, 0)
+
+    def _make_layer(self, block, planes, num_blocks, stride):
+        strides = [stride] + [1]*(num_blocks-1)
+        layers = []
+        for stride in strides:
+            layers.append(block(self.in_planes, planes, stride))
+            self.in_planes = planes * block.expansion
+        return nn.Sequential(*layers)
+
+    def forward(self, x):
+        out = self.conv1(x)
+        out = self.bn1(out)        
+        out = F.relu(out)
+        out = self.layer1(out)
+        out = self.layer2(out)
+        out = self.layer3(out)
+        out = self.layer4(out)
+        out = F.avg_pool2d(out, 4)
+        out = out.view(out.size(0), -1)
+        out = self.linear(out)
+        return out
+
+
+
+
 def resnet18(pretrained=False, **kwargs):
-    """Constructs a ResNet-18 model.
+    """Constructs a ResNet_imagenet-18 model.
 
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = ResNet(BasicBlock, [2, 2, 2, 2], **kwargs)
-    if pretrained:
-        model.load_state_dict(model_zoo.load_url(model_urls['resnet18']))
+    if args.dataset == 'cifar10':
+        model = ResNet_cifar(BasicBlock_cifar,[2, 2, 2, 2], **kwargs)
+    else:
+        model = ResNet_imagenet(BasicBlock_imagenet, [2, 2, 2, 2], **kwargs)
+#    if pretrained:
+#        model.load_state_dict(model_zoo.load_url(model_urls['resnet18']))
     return model
 
 
 def resnet34(pretrained=False, **kwargs):
-    """Constructs a ResNet-34 model.
+    """Constructs a ResNet_imagenet-34 model.
 
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = ResNet(BasicBlock, [3, 4, 6, 3], **kwargs)
-    if pretrained:
-        model.load_state_dict(model_zoo.load_url(model_urls['resnet34']))
+    if args.dataset == 'cifar10':
+        model = ResNet_cifar(BasicBlock_cifar, [3, 4, 6, 3], **kwargs)
+    else:
+        model = ResNet_imagenet(BasicBlock_imagenet, [3, 4, 6, 3], **kwargs)
+#    if pretrained:
+#        model.load_state_dict(model_zoo.load_url(model_urls['resnet34']))
     return model
 
 
 def resnet50(pretrained=False, **kwargs):
-    """Constructs a ResNet-50 model.
+    """Constructs a ResNet_imagenet-50 model.
 
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = ResNet(Bottleneck, [3, 4, 6, 3], **kwargs)
-    if pretrained:
-        model.load_state_dict(model_zoo.load_url(model_urls['resnet50']))
+    if args.dataset == 'cifar10':
+        model = ResNet_cifar(Bottleneck_cifar, [3, 4, 6, 3], **kwargs)
+    else:
+        model = ResNet_imagenet(Bottleneck_imagenet, [3, 4, 6, 3], **kwargs)
+#    if pretrained:
+#        model.load_state_dict(model_zoo.load_url(model_urls['resnet50']))
     return model
 
 
 def resnet101(pretrained=False, **kwargs):
-    """Constructs a ResNet-101 model.
+    """Constructs a ResNet_imagenet-101 model.
 
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = ResNet(Bottleneck, [3, 4, 23, 3], **kwargs)
-    if pretrained:
-        model.load_state_dict(model_zoo.load_url(model_urls['resnet101']))
+    if args.dataset == 'cifar10':
+        model = ResNet_cifar(Bottleneck_cifar, [3, 4, 23, 3], **kwargs)
+    else:
+        model = ResNet_imagenet(Bottleneck_imagenet, [3, 4, 23, 3], **kwargs)
+#    if pretrained:
+#        model.load_state_dict(model_zoo.load_url(model_urls['resnet101']))
     return model
 
 
 def resnet152(pretrained=False, **kwargs):
-    """Constructs a ResNet-152 model.
+    """Constructs a ResNet_imagenet-152 model.
 
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = ResNet(Bottleneck, [3, 8, 36, 3], **kwargs)
-    if pretrained:
-        model.load_state_dict(model_zoo.load_url(model_urls['resnet152']))
+    model = ResNet_cifar(Bottleneck_cifar, [3, 8, 36, 3], **kwargs)
+    model = ResNet_imagenet(Bottleneck_imagenet, [3, 8, 36, 3], **kwargs)
+#    if pretrained:
+#        model.load_state_dict(model_zoo.load_url(model_urls['resnet152']))
     return model
 
-if __name__ == "__main__"
-    main()
+
 
 def main():
 
@@ -257,15 +370,15 @@ def main():
     use_cuda = not args.no_cuda and torch.cuda.is_available()
     device= torch.device("cuda" if use_cuda else "cpu")
 
-    if args.resnet == 'resnet18'
+    if args.resnet == 'resnet18':
         model = resnet18()
-    if args.resnet == 'resnet34'
+    elif args.resnet == 'resnet34':
         model = resnet34()
-    if args.resnet == 'resnet50'
+    elif args.resnet == 'resnet50':
         model = resnet50()
-    if args.resnet == 'resnet101'
+    elif args.resnet == 'resnet101':
         model = resnet101()
-    if args.resnet == 'resnet152'
+    elif args.resnet == 'resnet152':
         model = resnet152()
 
     criterion = nn.CrossEntropyLoss().cuda()
@@ -283,7 +396,7 @@ def main():
                 train=True,
                 download=True,
                 transform = transforms.Compose([
-                    transforms.RandomCrop(32,4)
+                    transforms.RandomCrop(32,4),
                     transforms.RandomHorizontalFlip(),
                     transforms.ToTensor(),
                     transforms.Normalize(
@@ -482,15 +595,15 @@ class AverageMeter(object):
 
 def adjust_learning_rate(optimizer, epoch):
     
-    if epoch == 34000
-    lr = args.lr /10
-    for param_group in optimizer.param_groups:
-        param_group['lr']=lr
+    if epoch == 34000:
+        lr = args.lr /10
+        for param_group in optimizer.param_groups:
+            param_group['lr']=lr
 
-    if epoch == 48000
-    lr = args.lr /100
-    for param_group in optimizer.param_groups:
-        param_group['lr']=lr
+    if epoch == 48000:
+        lr = args.lr /100
+        for param_group in optimizer.param_groups:
+            param_group['lr']=lr
 
 def accuracy(output, target, topk=(1,)):
 
@@ -507,4 +620,7 @@ def accuracy(output, target, topk=(1,)):
             correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
             res.append(correct_k.mul_(100.0 / batch_size))
         return res
+if __name__ == '__main__':
+    main()
+
 
