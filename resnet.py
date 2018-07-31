@@ -14,6 +14,7 @@ import torch.backends.cudnn as cudnn
 import torch.utils.data
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
+import torch.nn.parallel
 import torch.nn.functional as F
 #import torch.utils.model_zoo as model_zoo
 
@@ -257,7 +258,8 @@ class ResNet_cifar(nn.Module):
             elif isinstance(m, nn.BatchNorm2d):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
-
+            type(m)
+#
     def _make_layer(self, block, planes, num_blocks, stride):
         strides = [stride] + [1]*(num_blocks-1)
         layers = []
@@ -380,7 +382,7 @@ def main():
         model = resnet101()
     elif args.resnet == 'resnet152':
         model = resnet152()
-
+    model.cuda()
     criterion = nn.CrossEntropyLoss().cuda()
     optimizer = torch.optim.SGD(
             model.parameters(),
@@ -408,7 +410,8 @@ def main():
             shuffle=True,
             num_workers=4,
             pin_memory=True)
-   
+    
+
     eval_loader = torch.utils.data.DataLoader(
             datasets.CIFAR10(
                 '../data',
@@ -491,8 +494,7 @@ def train(train_loader, model, criterion, optimizer, epoch, f):
         data_time.update(time.time() - end)
 
         target = target.cuda()
-        img = img.cuda()
-
+        img = img.type(torch.cuda.FloatTensor).cuda()
         output = model(img)
         loss = criterion(output, target)
 
@@ -525,7 +527,7 @@ def train(train_loader, model, criterion, optimizer, epoch, f):
 
     return losses.avg, top1.avg
 
-def validate(val_loader, model, criterion, f):
+def validate(eval_loader, model, criterion, f):
     batch_time = AverageMeter()
     losses = AverageMeter()
     top1 = AverageMeter()
@@ -549,7 +551,6 @@ def validate(val_loader, model, criterion, f):
             top1.update(prec1[0], img.size(0))
             top5.update(prec1[0], img.size(0))
     
-            optimizer.zero_grad()
     
             batch_time.update(time.time() - end)
             end = time.time()
@@ -615,7 +616,7 @@ def accuracy(output, target, topk=(1,)):
         pred = pred.t()
         correct = pred.eq(target.view(1,-1).expand_as(pred))
 
-        red = []
+        res = []
         for k in topk:
             correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
             res.append(correct_k.mul_(100.0 / batch_size))
