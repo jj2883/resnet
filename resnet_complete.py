@@ -20,7 +20,7 @@ import torch.nn.functional as F
 
 parser = argparse.ArgumentParser(description ='PyTorch ResNet_imagenet')
 
-parser.add_argument('--epochs', default = 64000, type=int, metavar='N', help= 'epoch default =74')
+parser.add_argument('--epochs', default = 74, type=int, metavar='N', help= 'epoch default =74')
 parser.add_argument('--dataset', default= 'cifar10', type=str, help='dataset of cifar10 or imagenet, default is cifar10')
 parser.add_argument('--start-epoch', default =0, type=int, metavar='N', help='default is 0')
 parser.add_argument('--lr', '--learning-rate', default=0.01, type=float, metavar='LR', help='learning rate, default is 0.01')
@@ -252,13 +252,15 @@ class ResNet_cifar(nn.Module):
         self.layer3 = self._make_layer(block, 256, num_blocks[2], stride=2)
         self.layer4 = self._make_layer(block, 512, num_blocks[3], stride=2)
         self.linear = nn.Linear(512*block.expansion, num_classes)
+
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
             elif isinstance(m, nn.BatchNorm2d):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
-            type(m)
+
+
 #
     def _make_layer(self, block, planes, num_blocks, stride):
         strides = [stride] + [1]*(num_blocks-1)
@@ -596,12 +598,12 @@ class AverageMeter(object):
 
 def adjust_learning_rate(optimizer, epoch):
     
-    if epoch == 34000:
+    if epoch == 30:
         lr = args.lr /10
         for param_group in optimizer.param_groups:
             param_group['lr']=lr
 
-    if epoch == 48000:
+    if epoch == 54:
         lr = args.lr /100
         for param_group in optimizer.param_groups:
             param_group['lr']=lr
