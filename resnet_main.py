@@ -18,17 +18,17 @@ import torch.nn.parallel
 import torch.nn.functional as F
 
 import resnet_cifar
-from resnet_cifar import ResNet as ResNet_cifar 
-from resnet_imagenet import ResNet as ResNet_imagenet
-from resnet_cifar import BasicBlock as BasicBlock_cifar 
-from resnet_imagenet import BasicBlock as BasicBlock_imagenet
-from resnet_cifar import Bottleneck  as Bottleneck_cifar 
-from resnet_imagenet import Bottleneck as Bottleneck_imagenet
+#from resnet_cifar import ResNet as ResNet_cifar 
+#from resnet_imagenet import ResNet as ResNet_imagenet
+#from resnet_cifar import BasicBlock as BasicBlock_cifar 
+#from resnet_imagenet import BasicBlock as BasicBlock_imagenet
+#from resnet_cifar import Bottleneck  as Bottleneck_cifar 
+#from resnet_imagenet import Bottleneck as Bottleneck_imagenet
 #import torch.utils.model_zoo as model_zoo
 
 parser = argparse.ArgumentParser(description ='PyTorch ResNet_imagenet')
 
-parser.add_argument('--epochs', default = 74, type=int, metavar='N', help= 'epoch default =74')
+parser.add_argument('--epochs', default = 164, type=int, metavar='N', help= 'epoch default =74')
 parser.add_argument('--dataset', default= 'cifar10', type=str, help='dataset of cifar10 or imagenet, default is cifar10')
 parser.add_argument('--start-epoch', default =0, type=int, metavar='N', help='default is 0')
 parser.add_argument('--lr', '--learning-rate', default=0.01, type=float, metavar='LR', help='learning rate, default is 0.01')
@@ -36,7 +36,7 @@ parser.add_argument('--momentum', default=0.9, type=float, metavar='M', help='mo
 parser.add_argument('--weight-decay', '--wd', default = 1e-4, type=float, metavar='W', help='weight decay , default 1e-4')
 parser.add_argument('-e', '--evaluate', action='store_true', help='evaulate model, default true')
 parser.add_argument('--no-cuda', action='store_true', default = False, help='when not using cuda, default =false')
-parser.add_argument('--batch_size', default = 50, type=int, help='default batchsize =50')
+parser.add_argument('--batch_size', default = 128, type=int, help='default batchsize =50')
 
 
 
@@ -56,7 +56,7 @@ def main():
     use_cuda = not args.no_cuda and torch.cuda.is_available()
     device= torch.device("cuda" if use_cuda else "cpu")
     
-    model = ResNet_cifar(3,**kwargs)
+    model = resnet_cifar.ResNet_cifar(5)
 
 
     model.cuda()
@@ -273,12 +273,12 @@ class AverageMeter(object):
 
 def adjust_learning_rate(optimizer, epoch):
     
-    if epoch == 30:
+    if epoch == 82:
         lr = args.lr /10
         for param_group in optimizer.param_groups:
             param_group['lr']=lr
 
-    if epoch == 54:
+    if epoch == 123:
         lr = args.lr /100
         for param_group in optimizer.param_groups:
             param_group['lr']=lr

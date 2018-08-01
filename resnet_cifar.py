@@ -77,7 +77,7 @@ class Bottleneck(nn.Module):
 
 
 class ResNet(nn.Module):
-    def __init__(self, block,n, num_classes=10,**kwargs):
+    def __init__(self, block,n, num_classes=10):
         super(ResNet, self).__init__()
         self.in_planes = 16
 
@@ -142,6 +142,6 @@ class ResNet(nn.Module):
         return out
 
 
-def ResNet_cifar(n, **kwargs):
-    return ResNet(BasicBlock,n,**kwargs)
+def ResNet_cifar(n):
+    return ResNet(BasicBlock,n)
 
