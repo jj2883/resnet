@@ -16,6 +16,8 @@ import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 import torch.nn.parallel
 import torch.nn.functional as F
+
+import resnet_cifar
 from resnet_cifar import ResNet as ResNet_cifar 
 from resnet_imagenet import ResNet as ResNet_imagenet
 from resnet_cifar import BasicBlock as BasicBlock_cifar 
@@ -34,82 +36,9 @@ parser.add_argument('--momentum', default=0.9, type=float, metavar='M', help='mo
 parser.add_argument('--weight-decay', '--wd', default = 1e-4, type=float, metavar='W', help='weight decay , default 1e-4')
 parser.add_argument('-e', '--evaluate', action='store_true', help='evaulate model, default true')
 parser.add_argument('--no-cuda', action='store_true', default = False, help='when not using cuda, default =false')
-parser.add_argument('--resnet', default = 'resnet50', type=str, help='choose from resnet18, resnet34, 50, 101, 152, default is 50')
 parser.add_argument('--batch_size', default = 50, type=int, help='default batchsize =50')
 
 
-
-def resnet18(pretrained=False, **kwargs):
-    """Constructs a ResNet_imagenet-18 model.
-
-    Args:
-        pretrained (bool): If True, returns a model pre-trained on ImageNet
-    """
-    if args.dataset == 'cifar10':
-        model = ResNet_cifar(BasicBlock_cifar,[2, 2, 2, 2], **kwargs)
-    else:
-        model = ResNet_imagenet(BasicBlock_imagenet, [2, 2, 2, 2], **kwargs)
-#    if pretrained:
-#        model.load_state_dict(model_zoo.load_url(model_urls['resnet18']))
-    return model
-
-
-def resnet34(pretrained=False, **kwargs):
-    """Constructs a ResNet_imagenet-34 model.
-
-    Args:
-        pretrained (bool): If True, returns a model pre-trained on ImageNet
-    """
-    if args.dataset == 'cifar10':
-        model = ResNet_cifar(BasicBlock_cifar, [3, 4, 6, 3], **kwargs)
-    else:
-        model = ResNet_imagenet(BasicBlock_imagenet, [3, 4, 6, 3], **kwargs)
-#    if pretrained:
-#        model.load_state_dict(model_zoo.load_url(model_urls['resnet34']))
-    return model
-
-
-def resnet50(pretrained=False, **kwargs):
-    """Constructs a ResNet_imagenet-50 model.
-
-    Args:
-        pretrained (bool): If True, returns a model pre-trained on ImageNet
-    """
-    if args.dataset == 'cifar10':
-        model = ResNet_cifar(Bottleneck_cifar, [3, 4, 6, 3], **kwargs)
-    else:
-        model = ResNet_imagenet(Bottleneck_imagenet, [3, 4, 6, 3], **kwargs)
-#    if pretrained:
-#        model.load_state_dict(model_zoo.load_url(model_urls['resnet50']))
-    return model
-
-
-def resnet101(pretrained=False, **kwargs):
-    """Constructs a ResNet_imagenet-101 model.
-
-    Args:
-        pretrained (bool): If True, returns a model pre-trained on ImageNet
-    """
-    if args.dataset == 'cifar10':
-        model = ResNet_cifar(Bottleneck_cifar, [3, 4, 23, 3], **kwargs)
-    else:
-        model = ResNet_imagenet(Bottleneck_imagenet, [3, 4, 23, 3], **kwargs)
-#    if pretrained:
-#        model.load_state_dict(model_zoo.load_url(model_urls['resnet101']))
-    return model
-
-
-def resnet152(pretrained=False, **kwargs):
-    """Constructs a ResNet_imagenet-152 model.
-
-    Args:
-        pretrained (bool): If True, returns a model pre-trained on ImageNet
-    """
-    model = ResNet_cifar(Bottleneck_cifar, [3, 8, 36, 3], **kwargs)
-    model = ResNet_imagenet(Bottleneck_imagenet, [3, 8, 36, 3], **kwargs)
-#    if pretrained:
-#        model.load_state_dict(model_zoo.load_url(model_urls['resnet152']))
-    return model
 
 
 
@@ -126,17 +55,10 @@ def main():
     args = parser.parse_args()
     use_cuda = not args.no_cuda and torch.cuda.is_available()
     device= torch.device("cuda" if use_cuda else "cpu")
+    
+    model = ResNet_cifar(3,**kwargs)
 
-    if args.resnet == 'resnet18':
-        model = resnet18()
-    elif args.resnet == 'resnet34':
-        model = resnet34()
-    elif args.resnet == 'resnet50':
-        model = resnet50()
-    elif args.resnet == 'resnet101':
-        model = resnet101()
-    elif args.resnet == 'resnet152':
-        model = resnet152()
+
     model.cuda()
     criterion = nn.CrossEntropyLoss().cuda()
     optimizer = torch.optim.SGD(
