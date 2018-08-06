@@ -1,11 +1,13 @@
 import argparse
 import os
 import time
+import cv2
 import math
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+
 
 import torch
 import torch.nn as nn
@@ -16,8 +18,9 @@ import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 import torch.nn.parallel
 import torch.nn.functional as F
-
+import torchvision
 import resnet_cifar
+import resnet_imagenet
 #from resnet_cifar import ResNet as ResNet_cifar 
 #from resnet_imagenet import ResNet as ResNet_imagenet
 #from resnet_cifar import BasicBlock as BasicBlock_cifar 
@@ -45,20 +48,61 @@ parser.add_argument('--batch_size', default = 128, type=int, help='default batch
 def main():
 
     path_current = os.path.dirname(os.path.realpath(__file__))
-    path_subdir = 'resnet_dataset'
-    data_filename = 'resnet_dataset_lr_0.1.txt'
+    path_subdir = 'edge_resnet_datast'
+    data_filename = 'edge_resnet18_dataset.txt'
 
     path_file = os.path.join(path_current,path_subdir,data_filename)
-    f=open(path_file, 'w')
+#    f=open(path_file, 'w')
 
     global args, best_prec1
     args = parser.parse_args()
     use_cuda = not args.no_cuda and torch.cuda.is_available()
     device= torch.device("cuda" if use_cuda else "cpu")
     
-    model = resnet_cifar.ResNet_cifar(5)
+
+    model = resnet_imagenet.resnet18()
+
+    state_dict18_untrained = model.state_dict()
+
+    torch.save(state_dict18_untrained, 'edge_state_dict18_untrained.pt')
+
+    model_weight_untrained = torch.load('edge_state_dict18_untrained.pt')
+
+    
 
 
+
+    model_trained = torchvision.models.resnet18(pretrained=True)
+
+
+    state_dict18 = model_trained.state_dict()
+    
+    torch.save(state_dict18, 'edge_state_dict18.pt')
+
+    a = torch.load('edge_state_dict18.pt')
+
+#    a_init_weight = torch.randn(64,6,7,7)
+    
+#    a_init_weight = nn.Conv2d(6,64, kernel_size=7, stride =2, padding=3, bias=False)
+
+#    nn.init.kaiming_normal_(a_init_weight.weight, mode='fan_out', nonlinearity='relu')
+
+    a['conv1.weight'].data = model_weight_untrained['conv1.weight'].data
+
+    model.load_state_dict(a)
+    
+    model_state_dict18 = model.state_dict()
+    
+#    for k, v in model_state_dict18.items():
+#        print(k, v.size())
+
+#    function my_transform(x):
+#        canny = cv2.canny(x)
+#        x = normalize(x)
+#        return cat([x, canny])
+
+#    transforms.lambda(my_transform)
+    
     model.cuda()
     criterion = nn.CrossEntropyLoss().cuda()
     optimizer = torch.optim.SGD(
@@ -68,37 +112,39 @@ def main():
             weight_decay=args.weight_decay)
 
     cudnn.benchmark = True
+
+    traindir = os.path.join('../data/ILSVRC2012/', 'train')
+
+    evaldir = os.path.join('../data/ILSVRC2012/', 'val')
     
-    train_loader = torch.utils.data.DataLoader(
-            datasets.CIFAR10(
-                '../data',
-                train=True,
-                download=True,
-                transform = transforms.Compose([
-                    transforms.RandomCrop(32,4),
+    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229,0.224, 0.225])
+
+    train_dataset = datasets.ImageFolder(
+                traindir,
+                transforms.Compose([
+                    transforms.RandomCrop(224),
                     transforms.RandomHorizontalFlip(),
                     transforms.ToTensor(),
-                    transforms.Normalize(
-                        mean=[0.485,0.456, 0.406],
-                        std=[0.229,0.224,0.225]),
-                    ])
-                ),
-            batch_size=args.batch_size,
-            shuffle=True,
-            num_workers=4,
-            pin_memory=True)
+                    normalize,
+                    ]))
     
+    train_loader = torch.utils.data.DataLoader(
+                train_dataset,
+                batch_size=args.batch_size,
+                shuffle=False,
+                num_workers=4,
+                pin_memory=True)
+
+                
 
     eval_loader = torch.utils.data.DataLoader(
-            datasets.CIFAR10(
-                '../data',
-                train=False,
-                download=True,
+            datasets.ImageFolder(
+                evaldir,
                 transform = transforms.Compose([
+                    transforms.Resize(256),
+                    transforms.CenterCrop(224),
                     transforms.ToTensor(),
-                    transforms.Normalize(
-                        mean=[0.485,0.456, 0.406],
-                        std=[0.229,0.224,0.225]),
+                    normalize,
                     ])
                 ),
             batch_size=args.batch_size,
