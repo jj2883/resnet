@@ -113,11 +113,13 @@ def main():
             momentum = args.momentum, 
             weight_decay=args.weight_decay)
     
-    train_losses[epoch] = train_loss
-    train_prec1s[epoch] = train_prec1
-    eval_losses[epoch] = eval_loss
-    eval_prec1s[epoch] = eval_prec1
-    x_epoch[epoch] = epoch
+    train_losses = np.zeros((args.epochs))
+    train_prec1s = np.zeros((args.epochs))
+    eval_losses = np.zeros((args.epochs))
+    eval_prec1s = np.zeros((args.epochs))
+    x_epoch = np.zeros((args.epochs))
+
+
 # optionally resume from a checkpoint
     if args.resume:
         if os.path.isfile(args.resume):
@@ -177,11 +179,6 @@ def main():
             num_workers=4,
             pin_memory=True)
 
-    train_losses = np.zeros((args.epochs))
-    train_prec1s = np.zeros((args.epochs))
-    eval_losses = np.zeros((args.epochs))
-    eval_prec1s = np.zeros((args.epochs))
-    x_epoch = np.zeros((args.epochs))
 
     for epoch in range(0, args.epochs):
         adjust_learning_rate(optimizer, epoch)
@@ -189,7 +186,14 @@ def main():
         train_loss, train_prec1 = train(train_loader, model, criterion,optimizer, epoch, f)
         eval_loss, eval_prec1 = validate(eval_loader, model, criterion, f)
 
-        
+
+        train_losses[epoch] = train_loss
+        train_prec1s[epoch] = train_prec1
+        eval_losses[epoch] = eval_loss
+        eval_prec1s[epoch] = eval_prec1
+        x_epoch[epoch] = epoch
+
+
         # remember best prec@1 and save checkpoint
         is_best = eval_prec1 > best_prec1
         best_prec1 = max(eval_prec1, best_prec1)
