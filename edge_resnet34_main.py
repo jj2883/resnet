@@ -31,7 +31,7 @@ import edge_resnet_imagenet
 
 parser = argparse.ArgumentParser(description ='PyTorch ResNet_imagenet')
 
-parser.add_argument('--epochs', default = 2, type=int, metavar='N', help= 'epoch default =74')
+parser.add_argument('--epochs', default = 150, type=int, metavar='N', help= 'epoch default =74')
 parser.add_argument('--dataset', default= 'cifar10', type=str, help='dataset of cifar10 or imagenet, default is cifar10')
 parser.add_argument('--start-epoch', default =0, type=int, metavar='N', help='default is 0')
 parser.add_argument('--lr', '--learning-rate', default=0.01, type=float, metavar='LR', help='learning rate, default is 0.01')
@@ -40,10 +40,12 @@ parser.add_argument('--weight-decay', '--wd', default = 1e-4, type=float, metava
 parser.add_argument('-e', '--evaluate', action='store_true', help='evaulate model, default true')
 parser.add_argument('--no-cuda', action='store_true', default = False, help='when not using cuda, default =false')
 parser.add_argument('--batch_size', default = 128, type=int, help='default batchsize =50')
+parser.add_argument('--resume', default='', type=str, metavar='PATH',
+                    help='path to latest checkpoint (default: none)')
 
 
 
-
+best_prec1=0
 
 def main():
 
@@ -110,6 +112,21 @@ def main():
             args.lr, 
             momentum = args.momentum, 
             weight_decay=args.weight_decay)
+    
+    # optionally resume from a checkpoint
+    if args.resume:
+        if os.path.isfile(args.resume):
+            print("=> loading checkpoint '{}'".format(args.resume))
+            checkpoint = torch.load(args.resume)
+            args.start_epoch = checkpoint['epoch']
+            best_prec1 = checkpoint['best_prec1']
+            model.load_state_dict(checkpoint['state_dict'])
+            optimizer.load_state_dict(checkpoint['optimizer'])
+            print("=> loaded checkpoint '{}' (epoch {})"
+                  .format(args.resume, checkpoint['epoch']))
+        else:
+            print("=> no checkpoint found at '{}'".format(args.resume))
+
 
     cudnn.benchmark = True
 
@@ -172,6 +189,19 @@ def main():
         eval_losses[epoch] = eval_loss
         eval_prec1s[epoch] = eval_prec1
         x_epoch[epoch] = epoch
+        
+        # remember best prec@1 and save checkpoint
+        is_best = eval_prec1 > best_prec1
+        best_prec1 = max(eval_prec1, best_prec1)
+        save_checkpoint({
+            'epoch': epoch + 1,
+            'arch': data_filename,
+            'state_dict': model.state_dict(),
+            'best_prec1': best_prec1,
+            'optimizer' : optimizer.state_dict(),
+        }, is_best)
+
+
 
     plt.clf()
     plt.close()
@@ -302,6 +332,11 @@ def validate(eval_loader, model, criterion, f):
                 print('***Prec@1 {top1.avg:.3f} Prec@5 {top5.avg:.3f}'
                         .format(top1=top1, top5=top5))
     return losses.avg, top1.avg
+
+def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
+    torch.save(state, filename)
+    if is_best:
+        shutil.copyfile(filename, 'model_best.pth.tar')
 
 
 class AverageMeter(object):
