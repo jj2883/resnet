@@ -31,7 +31,7 @@ import edge_resnet_imagenet
 
 parser = argparse.ArgumentParser(description ='PyTorch ResNet_imagenet')
 
-parser.add_argument('--epochs', default = 2, type=int, metavar='N', help= 'epoch default =74')
+parser.add_argument('--epochs', default = 150, type=int, metavar='N', help= 'epoch default =74')
 parser.add_argument('--dataset', default= 'cifar10', type=str, help='dataset of cifar10 or imagenet, default is cifar10')
 parser.add_argument('--start-epoch', default =0, type=int, metavar='N', help='default is 0')
 parser.add_argument('--lr', '--learning-rate', default=0.01, type=float, metavar='LR', help='learning rate, default is 0.01')
