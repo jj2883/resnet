@@ -20,7 +20,7 @@ import torch.nn.parallel
 import torch.nn.functional as F
 import torchvision
 import resnet_cifar
-import resnet_imagenet
+import edge_resnet_imagenet
 #from resnet_cifar import ResNet as ResNet_cifar 
 #from resnet_imagenet import ResNet as ResNet_imagenet
 #from resnet_cifar import BasicBlock as BasicBlock_cifar 
@@ -31,10 +31,10 @@ import resnet_imagenet
 
 parser = argparse.ArgumentParser(description ='PyTorch ResNet_imagenet')
 
-parser.add_argument('--epochs', default = 164, type=int, metavar='N', help= 'epoch default =74')
+parser.add_argument('--epochs', default = 2, type=int, metavar='N', help= 'epoch default =74')
 parser.add_argument('--dataset', default= 'cifar10', type=str, help='dataset of cifar10 or imagenet, default is cifar10')
 parser.add_argument('--start-epoch', default =0, type=int, metavar='N', help='default is 0')
-parser.add_argument('--lr', '--learning-rate', default=0.1, type=float, metavar='LR', help='learning rate, default is 0.01')
+parser.add_argument('--lr', '--learning-rate', default=0.01, type=float, metavar='LR', help='learning rate, default is 0.01')
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M', help='momentum, default =0.9')
 parser.add_argument('--weight-decay', '--wd', default = 1e-4, type=float, metavar='W', help='weight decay , default 1e-4')
 parser.add_argument('-e', '--evaluate', action='store_true', help='evaulate model, default true')
@@ -48,11 +48,11 @@ parser.add_argument('--batch_size', default = 128, type=int, help='default batch
 def main():
 
     path_current = os.path.dirname(os.path.realpath(__file__))
-    path_subdir = 'edge_resnet_datast'
+    path_subdir = 'edge_resnet_dataset'
     data_filename = 'edge_resnet18_dataset.txt'
 
     path_file = os.path.join(path_current,path_subdir,data_filename)
-#    f=open(path_file, 'w')
+    f=open(path_file, 'w')
 
     global args, best_prec1
     args = parser.parse_args()
@@ -60,7 +60,7 @@ def main():
     device= torch.device("cuda" if use_cuda else "cpu")
     
 
-    model = resnet_imagenet.resnet18()
+    model = edge_resnet_imagenet.resnet18()
 
     state_dict18_untrained = model.state_dict()
 
@@ -117,13 +117,15 @@ def main():
 
     evaldir = os.path.join('../data/ILSVRC2012/', 'val')
     
-    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229,0.224, 0.225])
+    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406,0.4], std=[0.229,0.224, 0.225,0.22])
 
     train_dataset = datasets.ImageFolder(
                 traindir,
                 transforms.Compose([
+                    transforms.Resize(256),
                     transforms.RandomCrop(224),
                     transforms.RandomHorizontalFlip(),
+                    transforms.Lambda(lambda img: makeEdge(img)),
                     transforms.ToTensor(),
                     normalize,
                     ]))
@@ -131,7 +133,7 @@ def main():
     train_loader = torch.utils.data.DataLoader(
                 train_dataset,
                 batch_size=args.batch_size,
-                shuffle=False,
+                shuffle=True,
                 num_workers=4,
                 pin_memory=True)
 
@@ -143,6 +145,7 @@ def main():
                 transform = transforms.Compose([
                     transforms.Resize(256),
                     transforms.CenterCrop(224),
+                    transforms.Lambda(lambda img: makeEdge(img)),
                     transforms.ToTensor(),
                     normalize,
                     ])
@@ -180,7 +183,7 @@ def main():
     ax_loss.set_xlabel('epoch')
     ax_loss.set_ylabel('loss')
     ax_loss.set_title('Loss of Train and Test')
-    plot_loss_filename = 'resnetloss_lr_0.1.png'
+    plot_loss_filename = 'edge_resnet18loss.png'
     path_loss_file = os.path.join(path_current, path_subdir, plot_loss_filename)
     fig_loss.savefig(path_loss_file)
 
@@ -195,7 +198,7 @@ def main():
     ax_prec.set_xlabel('epoch')
     ax_prec.set_ylabel('Best1 Precision')
     ax_prec.set_title('Best1 Precision of Train and Test')
-    plot_prec_filename = 'resnetprec_lr_0.1.png'
+    plot_prec_filename = 'edge_resnet18prec.png'
     path_prec_file = os.path.join(path_current, path_subdir, plot_prec_filename)
     fig_prec.savefig(path_prec_file)
 
@@ -217,7 +220,8 @@ def train(train_loader, model, criterion, optimizer, epoch, f):
         data_time.update(time.time() - end)
 
         target = target.cuda()
-        img = img.type(torch.cuda.FloatTensor).cuda()
+#        img = img.type(torch.cuda.FloatTensor).cuda()
+        img = img.cuda()
         output = model(img)
         loss = criterion(output, target)
 
@@ -317,14 +321,22 @@ class AverageMeter(object):
         self.count += n
         self.avg = self.sum/self.count
 
+def makeEdge(img):
+
+    img = cv2.GaussianBlur(np.asarray(img),(3,3),0)
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    laplacian = cv2.Laplacian(gray, cv2.CV_8U)
+    laplacian_cat = np.dstack((img,laplacian))
+    return laplacian_cat
+
 def adjust_learning_rate(optimizer, epoch):
     
-    if epoch == 82:
+    if epoch == 60:
         lr = args.lr /10
         for param_group in optimizer.param_groups:
             param_group['lr']=lr
 
-    if epoch == 123:
+    if epoch == 90:
         lr = args.lr /100
         for param_group in optimizer.param_groups:
             param_group['lr']=lr
