@@ -49,7 +49,7 @@ def main():
 
     path_current = os.path.dirname(os.path.realpath(__file__))
     path_subdir = 'edge_resnet_dataset'
-    data_filename = 'edge_resnet18_dataset.txt'
+    data_filename = 'edge_resnet34_dataset.txt'
 
     path_file = os.path.join(path_current,path_subdir,data_filename)
     f=open(path_file, 'w')
@@ -60,26 +60,26 @@ def main():
     device= torch.device("cuda" if use_cuda else "cpu")
     
 
-    model = edge_resnet_imagenet.resnet18()
+    model = edge_resnet_imagenet.resnet34()
 
-    state_dict18_untrained = model.state_dict()
+    state_dict34_untrained = model.state_dict()
 
-    torch.save(state_dict18_untrained, 'edge_state_dict18_untrained.pt')
+    torch.save(state_dict34_untrained, 'edge_state_dict34_untrained.pt')
 
-    model_weight_untrained = torch.load('edge_state_dict18_untrained.pt')
+    model_weight_untrained = torch.load('edge_state_dict34_untrained.pt')
 
     
 
 
 
-    model_trained = torchvision.models.resnet18(pretrained=True)
+    model_trained = torchvision.models.resnet34(pretrained=True)
 
 
-    state_dict18 = model_trained.state_dict()
+    state_dict34 = model_trained.state_dict()
     
-    torch.save(state_dict18, 'edge_state_dict18.pt')
+    torch.save(state_dict34, 'edge_state_dict34.pt')
 
-    a = torch.load('edge_state_dict18.pt')
+    a = torch.load('edge_state_dict34.pt')
 
 #    a_init_weight = torch.randn(64,6,7,7)
     
@@ -91,9 +91,9 @@ def main():
 
     model.load_state_dict(a)
     
-    model_state_dict18 = model.state_dict()
+    model_state_dict34 = model.state_dict()
     
-#    for k, v in model_state_dict18.items():
+#    for k, v in model_state_dict34.items():
 #        print(k, v.size())
 
 #    function my_transform(x):
@@ -183,7 +183,7 @@ def main():
     ax_loss.set_xlabel('epoch')
     ax_loss.set_ylabel('loss')
     ax_loss.set_title('Loss of Train and Test')
-    plot_loss_filename = 'edge_resnet18loss.png'
+    plot_loss_filename = 'edge_resnet34loss.png'
     path_loss_file = os.path.join(path_current, path_subdir, plot_loss_filename)
     fig_loss.savefig(path_loss_file)
 
@@ -198,7 +198,7 @@ def main():
     ax_prec.set_xlabel('epoch')
     ax_prec.set_ylabel('Best1 Precision')
     ax_prec.set_title('Best1 Precision of Train and Test')
-    plot_prec_filename = 'edge_resnet18prec.png'
+    plot_prec_filename = 'edge_resnet34prec.png'
     path_prec_file = os.path.join(path_current, path_subdir, plot_prec_filename)
     fig_prec.savefig(path_prec_file)
 
