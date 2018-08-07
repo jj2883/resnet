@@ -113,7 +113,12 @@ def main():
             momentum = args.momentum, 
             weight_decay=args.weight_decay)
     
-    # optionally resume from a checkpoint
+    train_losses[epoch] = train_loss
+    train_prec1s[epoch] = train_prec1
+    eval_losses[epoch] = eval_loss
+    eval_prec1s[epoch] = eval_prec1
+    x_epoch[epoch] = epoch
+# optionally resume from a checkpoint
     if args.resume:
         if os.path.isfile(args.resume):
             print("=> loading checkpoint '{}'".format(args.resume))
@@ -184,11 +189,6 @@ def main():
         train_loss, train_prec1 = train(train_loader, model, criterion,optimizer, epoch, f)
         eval_loss, eval_prec1 = validate(eval_loader, model, criterion, f)
 
-        train_losses[epoch] = train_loss
-        train_prec1s[epoch] = train_prec1
-        eval_losses[epoch] = eval_loss
-        eval_prec1s[epoch] = eval_prec1
-        x_epoch[epoch] = epoch
         
         # remember best prec@1 and save checkpoint
         is_best = eval_prec1 > best_prec1
@@ -199,6 +199,10 @@ def main():
             'state_dict': model.state_dict(),
             'best_prec1': best_prec1,
             'optimizer' : optimizer.state_dict(),
+            'train loss': train_losses,
+            'train Precision': train_prec1s,
+            'test loss': eval_losses,
+            'test Precision': eval_prec1s,
         }, is_best)
 
 
@@ -333,10 +337,10 @@ def validate(eval_loader, model, criterion, f):
                         .format(top1=top1, top5=top5))
     return losses.avg, top1.avg
 
-def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
+def save_checkpoint(state, is_best, filename='checkpoint_edge_resnet18.pth.tar'):
     torch.save(state, filename)
     if is_best:
-        shutil.copyfile(filename, 'model_best.pth.tar')
+        shutil.copyfile(filename, 'model_best_edge_resnet18.pth.tar')
 
 
 class AverageMeter(object):
