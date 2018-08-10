@@ -20,15 +20,8 @@ import torchvision.datasets as datasets
 import torch.nn.parallel
 import torch.nn.functional as F
 import torchvision
-import resnet_cifar
+import edge_resnet_cifar
 import edge_resnet_imagenet
-#from resnet_cifar import ResNet as ResNet_cifar 
-#from resnet_imagenet import ResNet as ResNet_imagenet
-#from resnet_cifar import BasicBlock as BasicBlock_cifar 
-#from resnet_imagenet import BasicBlock as BasicBlock_imagenet
-#from resnet_cifar import Bottleneck  as Bottleneck_cifar 
-#from resnet_imagenet import Bottleneck as Bottleneck_imagenet
-#import torch.utils.model_zoo as model_zoo
 
 parser = argparse.ArgumentParser(description ='PyTorch ResNet_imagenet')
 
@@ -40,7 +33,7 @@ parser.add_argument('--momentum', default=0.9, type=float, metavar='M', help='mo
 parser.add_argument('--weight-decay', '--wd', default = 1e-4, type=float, metavar='W', help='weight decay , default 1e-4')
 parser.add_argument('-e', '--evaluate', action='store_true', help='evaulate model, default true')
 parser.add_argument('--no-cuda', action='store_true', default = False, help='when not using cuda, default =false')
-parser.add_argument('--batch_size', default = 128, type=int, help='default batchsize =50')
+parser.add_argument('--batch_size', default = 64, type=int, help='default batchsize =50')
 parser.add_argument('--resume', default='', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
 
@@ -52,7 +45,7 @@ def main():
 
     path_current = os.path.dirname(os.path.realpath(__file__))
     path_subdir = 'edge_resnet_dataset'
-    data_filename = 'edge_resnet34_dataset.txt'
+    data_filename = 'edge_resnet_cifar3_dataset.txt'
 
     path_file = os.path.join(path_current,path_subdir,data_filename)
     f=open(path_file, 'w')
@@ -63,26 +56,26 @@ def main():
     device= torch.device("cuda" if use_cuda else "cpu")
     
 
-    model = edge_resnet_imagenet.resnet34()
+    model = edge_resnet_cifar.ResNet_cifar(3)
 
-    state_dict34_untrained = model.state_dict()
+ #   state_dict3_untrained = model.state_dict()
 
-    torch.save(state_dict34_untrained, 'edge_state_dict34_untrained.pt')
+#    torch.save(state_dict3_untrained, 'edge_state_dict3_untrained.pt')
 
-    model_weight_untrained = torch.load('edge_state_dict34_untrained.pt')
+#    model_weight_untrained = torch.load('edge_state_dict3_untrained.pt')
 
     
 
 
 
-    model_trained = torchvision.models.resnet34(pretrained=True)
+#    model_trained = torchvision.models.resnet_cifar3(pretrained=True)
 
 
-    state_dict34 = model_trained.state_dict()
+#    state_dict3 = model_trained.state_dict()
     
-    torch.save(state_dict34, 'edge_state_dict34.pt')
+#    torch.save(state_dict3, 'edge_state_dict18.pt')
 
-    a = torch.load('edge_state_dict34.pt')
+#    a = torch.load('edge_state_dict3.pt')
 
 #    a_init_weight = torch.randn(64,6,7,7)
     
@@ -90,13 +83,13 @@ def main():
 
 #    nn.init.kaiming_normal_(a_init_weight.weight, mode='fan_out', nonlinearity='relu')
 
-    a['conv1.weight'].data = model_weight_untrained['conv1.weight'].data
+#    a['conv1.weight'].data = model_weight_untrained['conv1.weight'].data
 
-    model.load_state_dict(a)
+#    model.load_state_dict(a)
     
-    model_state_dict34 = model.state_dict()
+#    model_state_dict3 = model.state_dict()
     
-#    for k, v in model_state_dict34.items():
+#    for k, v in model_state_dict3.items():
 #        print(k, v.size())
 
 #    function my_transform(x):
@@ -119,7 +112,9 @@ def main():
     eval_losses = np.zeros((args.epochs))
     eval_prec1s = np.zeros((args.epochs))
     x_epoch = np.zeros((args.epochs))
-    # optionally resume from a checkpoint
+
+
+# optionally resume from a checkpoint
     if args.resume:
         if os.path.isfile(args.resume):
             print("=> loading checkpoint '{}'".format(args.resume))
@@ -136,48 +131,41 @@ def main():
 
     cudnn.benchmark = True
 
-    traindir = os.path.join('../data/ILSVRC2012/', 'train')
-
-    evaldir = os.path.join('../data/ILSVRC2012/', 'val')
     
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406,0.4], std=[0.229,0.224, 0.225,0.22])
 
-    train_dataset = datasets.ImageFolder(
-                traindir,
-                transforms.Compose([
-                    transforms.Resize(256),
-                    transforms.RandomCrop(224),
+    train_loader = torch.utils.data.DataLoader(
+            datasets.CIFAR10(
+                '../data',
+                train=True,
+                download=True,
+                transform = transforms.Compose([
+                    transforms.RandomCrop(32,4),
                     transforms.RandomHorizontalFlip(),
                     transforms.Lambda(lambda img: makeEdge(img)),
                     transforms.ToTensor(),
                     normalize,
-                    ]))
+                    ),
+            batch_size=args.batch_size,
+            shuffle=True,
+            num_workers=4,
+            pin_memory=True)
     
-    train_loader = torch.utils.data.DataLoader(
-                train_dataset,
-                batch_size=args.batch_size,
-                shuffle=True,
-                num_workers=4,
-                pin_memory=True)
-
-                
 
     eval_loader = torch.utils.data.DataLoader(
-            datasets.ImageFolder(
-                evaldir,
+            datasets.CIFAR10(
+                '../data',
+                train=False,
+                download=True,
                 transform = transforms.Compose([
-                    transforms.Resize(256),
-                    transforms.CenterCrop(224),
                     transforms.Lambda(lambda img: makeEdge(img)),
                     transforms.ToTensor(),
                     normalize,
-                    ])
-                ),
+                    ),
             batch_size=args.batch_size,
             shuffle=False,
             num_workers=4,
             pin_memory=True)
-
 
     for epoch in range(0, args.epochs):
         adjust_learning_rate(optimizer, epoch)
@@ -185,12 +173,14 @@ def main():
         train_loss, train_prec1 = train(train_loader, model, criterion,optimizer, epoch, f)
         eval_loss, eval_prec1 = validate(eval_loader, model, criterion, f)
 
+
         train_losses[epoch] = train_loss
         train_prec1s[epoch] = train_prec1
         eval_losses[epoch] = eval_loss
         eval_prec1s[epoch] = eval_prec1
         x_epoch[epoch] = epoch
-        
+
+
         # remember best prec@1 and save checkpoint
         is_best = eval_prec1 > best_prec1
         best_prec1 = max(eval_prec1, best_prec1)
@@ -204,7 +194,6 @@ def main():
             'train Precision': train_prec1s,
             'test loss': eval_losses,
             'test Precision': eval_prec1s,
-            
         }, is_best)
 
 
@@ -219,7 +208,7 @@ def main():
     ax_loss.set_xlabel('epoch')
     ax_loss.set_ylabel('loss')
     ax_loss.set_title('Loss of Train and Test')
-    plot_loss_filename = 'edge_resnet34loss.png'
+    plot_loss_filename = 'edge_resnet_cifar3loss.png'
     path_loss_file = os.path.join(path_current, path_subdir, plot_loss_filename)
     fig_loss.savefig(path_loss_file)
 
@@ -234,7 +223,7 @@ def main():
     ax_prec.set_xlabel('epoch')
     ax_prec.set_ylabel('Best1 Precision')
     ax_prec.set_title('Best1 Precision of Train and Test')
-    plot_prec_filename = 'edge_resnet34prec.png'
+    plot_prec_filename = 'edge_resnet_cifar3prec.png'
     path_prec_file = os.path.join(path_current, path_subdir, plot_prec_filename)
     fig_prec.savefig(path_prec_file)
 
@@ -339,10 +328,10 @@ def validate(eval_loader, model, criterion, f):
                         .format(top1=top1, top5=top5))
     return losses.avg, top1.avg
 
-def save_checkpoint(state, is_best, filename='checkpoint_edge_resnet34.pth.tar'):
+def save_checkpoint(state, is_best, filename='checkpoint_edge_resnet_cifar3.pth.tar'):
     torch.save(state, filename)
     if is_best:
-        shutil.copyfile(filename, 'model_best_edge_resnet34.pth.tar')
+        shutil.copyfile(filename, 'model_best_edge_resnet_cifar3.pth.tar')
 
 
 class AverageMeter(object):

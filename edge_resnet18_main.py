@@ -1,3 +1,4 @@
+import shutil
 import argparse
 import os
 import time
@@ -39,7 +40,7 @@ parser.add_argument('--momentum', default=0.9, type=float, metavar='M', help='mo
 parser.add_argument('--weight-decay', '--wd', default = 1e-4, type=float, metavar='W', help='weight decay , default 1e-4')
 parser.add_argument('-e', '--evaluate', action='store_true', help='evaulate model, default true')
 parser.add_argument('--no-cuda', action='store_true', default = False, help='when not using cuda, default =false')
-parser.add_argument('--batch_size', default = 128, type=int, help='default batchsize =50')
+parser.add_argument('--batch_size', default = 256, type=int, help='default batchsize =50')
 parser.add_argument('--resume', default='', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
 
